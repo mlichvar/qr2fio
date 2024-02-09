@@ -1,0 +1,87 @@
+#!/bin/bash
+# Copyright (C) Miroslav Lichvar 2024 (GPLv2+)
+#
+# This script captures or loads an image of a QR code containing payment
+# information in the SPD format and converts it to a string which can be loaded
+# by the following bookmarklet to fill the fio.cz "Tuzemská platba" web
+# form.
+#
+# javascript: for (const x of JSON.parse(prompt("Prikaz"))) { document.getElementsByName("pokyn:contentEdit:"+x[0])[0].value = x[1]; }; undefined
+#
+# Set the following variable to your account number (without the FIO bank code)
+# to have it selected in the form.
+
+account_from=
+
+set -e
+
+if [ "$#" -lt 1 ]; then
+	tmp=$(mktemp -d)
+	[ -n "$tmp" ]
+
+	trap "rm -rf \"$tmp\"" EXIT
+
+	img=$tmp/qr.png
+	import "$img"
+else
+	img=$1
+fi
+
+msg=$(zbarimg "$img")
+printf "%s\n\n" "$msg" 1>&2
+
+if ! [[ "$msg" =~ QR-Code:SPD\*1.[02]\* ]]; then
+	echo "Unsupported format" 1>&2
+	exit 1
+fi
+
+msg=${msg#*SPD\**\*}
+msg=$(printf "%s" "$msg" | tr -d '<>"\\')
+
+while read -r -d '*' code; do
+	key=${code%%:*}
+	val=${code#*:}
+	case "$key" in
+		ACC|AM|CC|MSG|PT|RN)
+			declare "${key}=${val}"
+			;;
+		X-KS|X-VS|X-SS)
+			declare "${key#X-}=${val}"
+			;;
+		DT)
+			;;
+		*)
+			echo "Unknown code $code" 1>&2
+			;;
+	esac
+done <<< "${msg}*"
+
+if [ "$CC" != "CZK" ]; then
+	echo "Invalid currency" 1>&2
+	exit 1
+fi
+
+if ! [[ "$ACC" =~ ^CZ[0-9]{22}$ ]]; then
+	echo "Invalid account number" 1>&2
+fi
+
+bank_to=${ACC:4:4}
+account_to=${ACC:8:6}-${ACC:14}
+amount=${AM/./,}
+
+entry=$(
+	printf "["
+	[ -n "$account_from" ] && \
+	printf "[\"ucetOdesilatele:zdrojovyUcetDropDown\",\"$account_from\"],"
+	printf "[\"ucetPrijemce\",\"$account_to\"],"
+	printf "[\"kodBankyPrijemce:kodBanky\",\"$bank_to\"],"
+	printf "[\"objem\",\"$amount\"],"
+	printf "[\"typPlatby\",\"INSTANTNI\"],"
+	printf "[\"vs\",\"$VS\"],"
+	printf "[\"ks\",\"$KS\"],"
+	printf "[\"zpravaProPrijemce\",\"$MSG\"]"
+	printf "]"
+)
+
+echo "$entry"
+echo "$entry" | xclip -i

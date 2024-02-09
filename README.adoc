@@ -1,0 +1,27 @@
+= qr2fio
+
+Jednoduchý bashový skriptík pro rychlé zadání platby na webu Fio banky z QR
+kódu zobrazeného na obrazovce nebo uloženého v souboru. Určeno pro lidi, co si
+nechtějí snižovat bezpečnost zadáváním platby v mobilní aplikaci, která je
+zároveň i potvrzuje. Fio sice poskytuje API, přes to ale záměrně nejdou zadávat
+okamžité platby kvůli podmínkám ČNB.
+
+== Použití
+
+- zobrazím webovou stránku nebo dokument s QR kódem na obrazovce
+- spustím qr2fio
+- označím QR kód myší, platba se uloží do schránky
+- na webu Fio otevřu formulář tuzemské platby
+- kliknu na záložku uloženou v prohlížeči s tímto kódem (bookmarklet):
+----
+javascript: for (const x of JSON.parse(prompt("Prikaz"))) { document.getElementsByName("pokyn:contentEdit:"+x[0])[0].value = x[1]; }; undefined
+----
+- vložím platbu ze schránky do zobrazeného pole
+- odešlu, zkontroluji a potvrdím platbu
+
+== Závislosti
+
+- ImageMagick
+- bash
+- zbar
+- xclip
