@@ -85,7 +85,7 @@ entry=$(
 	printf "[\"typPlatby\",\"INSTANTNI\"],"
 	printf "[\"vs\",\"$VS\"],"
 	printf "[\"ks\",\"$KS\"],"
-	printf "[\"zpravaProPrijemce\",\"$MSG\"]"
+	printf "[\"zpravaProPrijemce\",\"%s\"]" "$MSG"
 	printf "]"
 )
 
