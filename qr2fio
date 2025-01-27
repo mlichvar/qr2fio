@@ -56,17 +56,23 @@ while read -r -d '*' code; do
 	esac
 done <<< "${msg}*"
 
+if [ -z "$CC" ]; then
+	CC=CZK
+	echo "Defaulting to currency $CC" 1>&2
+fi
+
 if [ "$CC" != "CZK" ]; then
-	echo "Invalid currency" 1>&2
+	echo "Invalid currency $CC" 1>&2
 	exit 1
 fi
 
-if ! [[ "$ACC" =~ ^CZ[0-9]{22}$ ]]; then
-	echo "Invalid account number" 1>&2
+if ! [[ "$ACC" =~ ^CZ[0-9]{22}(\+[A-Z]+)?$ ]]; then
+	echo "Invalid account number $ACC" 1>&2
+	exit 1
 fi
 
 bank_to=${ACC:4:4}
-account_to=${ACC:8:6}-${ACC:14}
+account_to=${ACC:8:6}-${ACC:14:10}
 amount=${AM/./,}
 
 entry=$(
